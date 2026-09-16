@@ -16,6 +16,13 @@ def _format_summary(result: ConditioningResult, label: str) -> str:
     average_reward = sum(rewards) / len(rewards) if rewards else 0.0
     positive_rewards = sum(1 for reward in rewards if reward > 0)
     win_rate = positive_rewards / len(rewards) if rewards else 0.0
+    active_rewards = [
+        reward
+        for reward, action in zip(result.rewards, result.actions)
+        if action.value != "FLAT"
+    ]
+    active_wins = sum(1 for reward in active_rewards if reward > 0)
+    active_win_rate = active_wins / len(active_rewards) if active_rewards else 0.0
 
     lines = [
         "FlyAlpha conditioning stats",
@@ -24,10 +31,13 @@ def _format_summary(result: ConditioningResult, label: str) -> str:
         f"Episodes:          {len(rewards)}",
         f"Cumulative reward: {result.cumulative_reward:.4f}",
         f"Average reward:    {average_reward:.4f}",
-        f"Win rate:          {win_rate:.2%}",
+        f"Bar win rate:      {win_rate:.2%}",
+        f"Active trades:     {len(active_rewards)}",
+        f"Active win rate:   {active_win_rate:.2%}",
         f"Actions:           {dict(action_counts)}",
         f"Learned weights:   {len(result.learned_weights)}",
-        f"Reward trace:      {sparkline(rewards)}",
+        f"Best/Worst reward: {max(rewards):.4f} / {min(rewards):.4f}" if rewards else "Best/Worst reward: 0.0000 / 0.0000",
+        f"Reward trace:      {sparkline(rewards, width=80)}",
     ]
     return "\n".join(lines)
 

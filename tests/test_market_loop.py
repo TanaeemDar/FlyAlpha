@@ -26,3 +26,6 @@ def test_conditioning_demo_learns_weights():
     assert result.learned_weights
     assert sparkline(result.rewards)
 
+
+def test_sparkline_is_bounded_for_large_inputs():
+    assert len(sparkline(tuple(range(1000)), width=40)) == 40
