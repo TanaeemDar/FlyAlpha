@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="360" viewBox="0 0 960 360" role="img" aria-labelledby="title desc">
+  <title id="title">FlyAlpha sample equity curve</title>
+  <desc id="desc">A stylized equity curve for the committed sample dataset.</desc>
+  <rect width="960" height="360" fill="#071019"/>
+  <g stroke="#203040" stroke-width="1">
+    <path d="M80 60H900M80 120H900M80 180H900M80 240H900M80 300H900"/>
+    <path d="M80 40V310M244 40V310M408 40V310M572 40V310M736 40V310M900 40V310"/>
+  </g>
+  <text x="80" y="34" fill="#f6f0de" font-family="Arial, sans-serif" font-size="24" font-weight="700">Sample FlyAlpha Equity Curve</text>
+  <text x="80" y="335" fill="#8aa0b8" font-family="Arial, sans-serif" font-size="14">Toy OHLCV sample - demonstrates reporting, not trading performance</text>
+  <path d="M80 266 L114 252 L148 226 L182 234 L216 244 L250 255 L284 238 L318 214 L352 188 L386 194 L420 218 L454 204 L488 172 L522 178 L556 214 L590 238 L624 224 L658 196 L692 166 L726 152 L760 184 L794 204 L828 218 L862 188 L900 154" fill="none" stroke="#32d7a4" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M80 266 L114 252 L148 226 L182 234 L216 244 L250 255 L284 238 L318 214 L352 188 L386 194 L420 218 L454 204 L488 172 L522 178 L556 214 L590 238 L624 224 L658 196 L692 166 L726 152 L760 184 L794 204 L828 218 L862 188 L900 154 L900 310 L80 310 Z" fill="#32d7a4" opacity="0.12"/>
+  <circle cx="900" cy="154" r="8" fill="#f2c94c"/>
+  <text x="720" y="84" fill="#f6f0de" font-family="Arial, sans-serif" font-size="15">reward -> dopamine -> plasticity</text>
+</svg>
+

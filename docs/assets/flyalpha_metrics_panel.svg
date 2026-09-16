@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="320" viewBox="0 0 960 320" role="img" aria-labelledby="title desc">
+  <title id="title">FlyAlpha sample metrics panel</title>
+  <desc id="desc">Sample visual metrics for public README presentation.</desc>
+  <rect width="960" height="320" fill="#0b1117"/>
+  <text x="48" y="48" fill="#f6f0de" font-family="Arial, sans-serif" font-size="26" font-weight="700">FlyAlpha Backtest Telemetry</text>
+  <g font-family="Arial, sans-serif">
+    <rect x="48" y="82" width="190" height="150" rx="8" fill="#13202a" stroke="#244252"/>
+    <text x="70" y="126" fill="#8aa0b8" font-size="14">Profit Factor</text>
+    <text x="70" y="174" fill="#32d7a4" font-size="42" font-weight="700">PF</text>
+    <text x="70" y="210" fill="#f6f0de" font-size="14">gross profit / gross loss</text>
+    <rect x="270" y="82" width="190" height="150" rx="8" fill="#13202a" stroke="#244252"/>
+    <text x="292" y="126" fill="#8aa0b8" font-size="14">Max Drawdown</text>
+    <text x="292" y="174" fill="#ff6b6b" font-size="42" font-weight="700">MDD</text>
+    <text x="292" y="210" fill="#f6f0de" font-size="14">peak-to-trough equity risk</text>
+    <rect x="492" y="82" width="190" height="150" rx="8" fill="#13202a" stroke="#244252"/>
+    <text x="514" y="126" fill="#8aa0b8" font-size="14">Active Trades</text>
+    <text x="514" y="174" fill="#f2c94c" font-size="42" font-weight="700">N</text>
+    <text x="514" y="210" fill="#f6f0de" font-size="14">non-FLAT decisions</text>
+    <rect x="714" y="82" width="190" height="150" rx="8" fill="#13202a" stroke="#244252"/>
+    <text x="736" y="126" fill="#8aa0b8" font-size="14">Neural Memory</text>
+    <text x="736" y="174" fill="#a78bfa" font-size="42" font-weight="700">KC</text>
+    <text x="736" y="210" fill="#f6f0de" font-size="14">dopamine-gated weights</text>
+  </g>
+  <path d="M80 278 C180 238 240 300 340 260 S510 230 610 264 760 292 888 242" fill="none" stroke="#32d7a4" stroke-width="4" stroke-linecap="round"/>
+</svg>
+

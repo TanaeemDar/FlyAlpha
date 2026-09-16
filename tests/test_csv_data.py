@@ -7,6 +7,7 @@ from flyalpha.experiments.tuning import run_tuning_grid
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample_ohlcv.csv"
+PUBLIC_SAMPLE = Path(__file__).resolve().parents[1] / "data" / "sample" / "flyalpha_sample_ohlcv.csv"
 
 
 def test_load_candles_csv_reads_existing_ohlcv():
@@ -29,3 +30,9 @@ def test_csv_conditioning_stats_and_tuning():
     assert len(trials) == 1
     assert "sample_ohlcv.csv" in summarize_csv(str(FIXTURE))
 
+
+def test_public_sample_dataset_is_loadable():
+    candles = load_candles_csv(PUBLIC_SAMPLE)
+
+    assert len(candles) >= 20
+    assert candles[0].open == 100.0
