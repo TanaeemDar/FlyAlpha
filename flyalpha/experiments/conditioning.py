@@ -76,3 +76,41 @@ def run_conditioning_demo(
         actions=tuple(actions),
         learned_weights=dict(plasticity.weights),
     )
+
+
+def run_conditioning_on_candles(
+    candles: list[MarketCandle],
+    learning_rate: float = 0.1,
+    trace_decay: float = 0.6,
+) -> ConditioningResult:
+    """Run the same fly-learning loop over existing candle data."""
+
+    if len(candles) < 2:
+        raise ValueError("at least two candles are required")
+
+    plasticity = KCToMBONPlasticity(learning_rate=learning_rate, trace_decay=trace_decay)
+    rewards: list[float] = []
+    actions: list[TradingAction] = []
+    expected_reward = 0.0
+
+    for previous, current in zip(candles, candles[1:]):
+        kenyon_activity = _kenyon_from_market(previous, current)
+        readout = plasticity.readout(kenyon_activity)
+        population = readout.dominant_population
+        action = action_from_population(population)
+        plasticity.activate(kenyon_activity, population)
+
+        execution = execute_position(action, previous, current)
+        reward = reward_from_execution(execution)
+        rpe = reward - expected_reward
+        expected_reward += 0.2 * rpe
+        plasticity.apply_dopamine(DopamineSignal.from_prediction_error(rpe))
+
+        rewards.append(reward)
+        actions.append(action)
+
+    return ConditioningResult(
+        rewards=tuple(rewards),
+        actions=tuple(actions),
+        learned_weights=dict(plasticity.weights),
+    )

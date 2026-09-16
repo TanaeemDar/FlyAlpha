@@ -113,6 +113,31 @@ Tune the current mushroom-body plasticity parameters:
 python -m flyalpha.runner tune --episodes 24 --limit 10
 ```
 
+Run stats on an existing OHLCV CSV:
+
+```bash
+python -m flyalpha.runner stats --csv path/to/candles.csv
+```
+
+Tune against an existing CSV:
+
+```bash
+python -m flyalpha.runner tune \
+  --csv path/to/candles.csv \
+  --learning-rates 0.01,0.05,0.1,0.2 \
+  --trace-decays 0.4,0.6,0.8 \
+  --limit 10
+```
+
+CSV files need these columns:
+
+```text
+open,high,low,close,volume
+```
+
+Column names are case-insensitive, and extra columns such as `timestamp` or
+`symbol` are ignored.
+
 Run one safe paper-trading tick:
 
 ```bash

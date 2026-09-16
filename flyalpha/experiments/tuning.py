@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .conditioning import run_conditioning_demo
+from flyalpha.senses import MarketCandle
+
+from .conditioning import run_conditioning_demo, run_conditioning_on_candles
 
 
 @dataclass(frozen=True)
@@ -21,17 +23,25 @@ def run_tuning_grid(
     episodes: int = 12,
     learning_rates: tuple[float, ...] = (0.02, 0.05, 0.1, 0.2),
     trace_decays: tuple[float, ...] = (0.4, 0.6, 0.8),
+    candles: list[MarketCandle] | None = None,
 ) -> list[TuningTrial]:
     """Run a deterministic grid over mushroom-body plasticity parameters."""
 
     trials: list[TuningTrial] = []
     for learning_rate in learning_rates:
         for trace_decay in trace_decays:
-            result = run_conditioning_demo(
-                episodes=episodes,
-                learning_rate=learning_rate,
-                trace_decay=trace_decay,
-            )
+            if candles is None:
+                result = run_conditioning_demo(
+                    episodes=episodes,
+                    learning_rate=learning_rate,
+                    trace_decay=trace_decay,
+                )
+            else:
+                result = run_conditioning_on_candles(
+                    candles,
+                    learning_rate=learning_rate,
+                    trace_decay=trace_decay,
+                )
             trials.append(
                 TuningTrial(
                     learning_rate=learning_rate,
@@ -57,4 +67,3 @@ def format_tuning_report(trials: list[TuningTrial], limit: int = 10) -> str:
             f"{trial.cumulative_reward:<9.4f} {trial.learned_weights}"
         )
     return "\n".join(lines)
-
