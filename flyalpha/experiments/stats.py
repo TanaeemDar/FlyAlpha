@@ -9,6 +9,7 @@ from flyalpha.data import load_candles_csv
 from flyalpha.environment import MoneyManagementConfig
 from flyalpha.experiments.conditioning import ConditioningResult, run_conditioning_demo, run_conditioning_on_candles
 from flyalpha.experiments.metrics import calculate_reward_metrics
+from flyalpha.experiments.strategy import StrategyFilterConfig
 from flyalpha.visualization import sparkline
 
 
@@ -65,6 +66,7 @@ def summarize_csv(
     learning_rate: float = 0.1,
     trace_decay: float = 0.6,
     money_management: MoneyManagementConfig | None = None,
+    strategy_filter: StrategyFilterConfig | None = None,
 ) -> str:
     candles = load_candles_csv(csv_path, limit=limit)
     result = run_conditioning_on_candles(
@@ -72,6 +74,7 @@ def summarize_csv(
         learning_rate=learning_rate,
         trace_decay=trace_decay,
         money_management=money_management,
+        strategy_filter=strategy_filter,
     )
     return _format_summary(result, label=csv_path)
 

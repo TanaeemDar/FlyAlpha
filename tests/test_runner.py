@@ -30,3 +30,22 @@ def test_runner_accepts_validate_command():
     assert args.command == "validate"
     assert args.csv == "data.csv"
     assert args.train_fraction == 0.6
+
+
+def test_runner_accepts_pf_tuning_controls():
+    args = build_parser().parse_args(
+        [
+            "tune",
+            "--objective",
+            "profit_factor",
+            "--confidence-thresholds",
+            "0,0.1",
+            "--trend-alignments",
+            "false,true",
+            "--breakeven-trigger-pcts",
+            "none,0.005",
+        ]
+    )
+
+    assert args.objective == "profit_factor"
+    assert args.confidence_thresholds == "0,0.1"

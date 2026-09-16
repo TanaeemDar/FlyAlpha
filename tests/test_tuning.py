@@ -29,3 +29,21 @@ def test_train_test_validation_reports_holdout():
     assert result.train_candles >= 2
     assert result.test_candles >= 2
     assert "Evaluated on test" in format_validation_report(result)
+
+
+def test_profit_factor_objective_requires_minimum_trades():
+    candles = [
+        MarketCandle(open=100 + index, high=102 + index, low=99 + index, close=101 + index, volume=1000)
+        for index in range(8)
+    ]
+
+    trials = run_tuning_grid(
+        candles=candles,
+        learning_rates=(0.05,),
+        trace_decays=(0.6,),
+        confidence_thresholds=(999.0,),
+        objective="profit_factor",
+        min_trades=1,
+    )
+
+    assert trials[0].score == float("-inf")

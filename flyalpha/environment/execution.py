@@ -28,20 +28,24 @@ def execute_position(
     quantity: float = 1.0,
     stop_price: float | None = None,
     take_profit_price: float | None = None,
+    breakeven_trigger_pct: float | None = None,
+    trailing_stop_pct: float | None = None,
 ) -> ExecutionResult:
     exit_price = exit_.close
     exit_reason = "close"
 
     if action is TradingAction.LONG:
-        if stop_price is not None and exit_.low <= stop_price:
-            exit_price = stop_price
+        adjusted_stop = _long_adjusted_stop(entry.close, exit_.high, stop_price, breakeven_trigger_pct, trailing_stop_pct)
+        if adjusted_stop is not None and exit_.low <= adjusted_stop:
+            exit_price = adjusted_stop
             exit_reason = "stop"
         elif take_profit_price is not None and exit_.high >= take_profit_price:
             exit_price = take_profit_price
             exit_reason = "take_profit"
     elif action is TradingAction.SHORT:
-        if stop_price is not None and exit_.high >= stop_price:
-            exit_price = stop_price
+        adjusted_stop = _short_adjusted_stop(entry.close, exit_.low, stop_price, breakeven_trigger_pct, trailing_stop_pct)
+        if adjusted_stop is not None and exit_.high >= adjusted_stop:
+            exit_price = adjusted_stop
             exit_reason = "stop"
         elif take_profit_price is not None and exit_.low <= take_profit_price:
             exit_price = take_profit_price
@@ -69,3 +73,35 @@ def execute_position(
         exit_price=exit_price,
         exit_reason=exit_reason,
     )
+
+
+def _long_adjusted_stop(
+    entry_price: float,
+    high: float,
+    stop_price: float | None,
+    breakeven_trigger_pct: float | None,
+    trailing_stop_pct: float | None,
+) -> float | None:
+    adjusted = stop_price
+    if breakeven_trigger_pct and high >= entry_price * (1.0 + breakeven_trigger_pct):
+        adjusted = max(adjusted or entry_price, entry_price)
+    if trailing_stop_pct:
+        trail = high * (1.0 - trailing_stop_pct)
+        adjusted = max(adjusted or trail, trail)
+    return adjusted
+
+
+def _short_adjusted_stop(
+    entry_price: float,
+    low: float,
+    stop_price: float | None,
+    breakeven_trigger_pct: float | None,
+    trailing_stop_pct: float | None,
+) -> float | None:
+    adjusted = stop_price
+    if breakeven_trigger_pct and low <= entry_price * (1.0 - breakeven_trigger_pct):
+        adjusted = min(adjusted or entry_price, entry_price)
+    if trailing_stop_pct:
+        trail = low * (1.0 + trailing_stop_pct)
+        adjusted = min(adjusted or trail, trail)
+    return adjusted

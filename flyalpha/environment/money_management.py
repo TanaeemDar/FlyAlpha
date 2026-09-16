@@ -20,6 +20,8 @@ class MoneyManagementConfig:
     max_leverage: float = 1.0
     cost_bps: float = 1.0
     min_quantity: float = 0.0
+    breakeven_trigger_pct: float | None = None
+    trailing_stop_pct: float | None = None
 
 
 @dataclass(frozen=True)
@@ -71,4 +73,3 @@ def plan_position(
         take_profit_price=take_profit_price,
         notional=quantity * entry.close,
     )
-

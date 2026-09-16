@@ -35,3 +35,18 @@ def test_execution_respects_long_stop_loss():
     assert execution.exit_reason == "stop"
     assert reward_from_execution(execution) < 0
 
+
+def test_execution_supports_trailing_stop():
+    entry = MarketCandle(open=100, high=100, low=100, close=100, volume=1000)
+    exit_ = MarketCandle(open=100, high=110, low=105, close=106, volume=1000)
+
+    execution = execute_position(
+        TradingAction.LONG,
+        entry,
+        exit_,
+        quantity=1,
+        trailing_stop_pct=0.02,
+    )
+
+    assert execution.exit_reason == "stop"
+    assert execution.exit_price == 107.8

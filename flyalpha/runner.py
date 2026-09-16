@@ -8,6 +8,7 @@ from flyalpha.data import load_candles_csv
 from flyalpha.environment import MoneyManagementConfig
 from flyalpha.experiments.stats import summarize
 from flyalpha.experiments.stats import summarize_csv
+from flyalpha.experiments.strategy import StrategyFilterConfig
 from flyalpha.experiments.tuning import format_tuning_report, format_validation_report, run_train_test_validation, run_tuning_grid
 from flyalpha.actions import TradingAction
 from flyalpha.trading_loop import run_trading_once
@@ -27,6 +28,20 @@ def _parse_optional_float_grid(raw: str) -> tuple[float | None, ...]:
     return tuple(values)
 
 
+def _parse_int_grid(raw: str) -> tuple[int, ...]:
+    return tuple(int(value.strip()) for value in raw.split(",") if value.strip())
+
+
+def _parse_bool_grid(raw: str) -> tuple[bool, ...]:
+    values: list[bool] = []
+    for value in raw.split(","):
+        cleaned = value.strip().lower()
+        if not cleaned:
+            continue
+        values.append(cleaned in {"1", "true", "yes", "y", "on"})
+    return tuple(values)
+
+
 def _money_management_from_args(args: argparse.Namespace) -> MoneyManagementConfig | None:
     if getattr(args, "no_money_management", False):
         return None
@@ -39,6 +54,17 @@ def _money_management_from_args(args: argparse.Namespace) -> MoneyManagementConf
         max_leverage=args.max_leverage,
         cost_bps=args.cost_bps,
         min_quantity=args.min_quantity,
+        breakeven_trigger_pct=args.breakeven_trigger_pct,
+        trailing_stop_pct=args.trailing_stop_pct,
+    )
+
+
+def _strategy_filter_from_args(args: argparse.Namespace) -> StrategyFilterConfig:
+    return StrategyFilterConfig(
+        confidence_threshold=args.confidence_threshold,
+        min_volatility=args.min_volatility,
+        trend_lookback=args.trend_lookback,
+        require_trend_alignment=args.require_trend_alignment,
     )
 
 
@@ -64,6 +90,12 @@ def build_parser() -> argparse.ArgumentParser:
     stats.add_argument("--max-leverage", type=float, default=1.0)
     stats.add_argument("--cost-bps", type=float, default=1.0)
     stats.add_argument("--min-quantity", type=float, default=0.0)
+    stats.add_argument("--breakeven-trigger-pct", type=float, default=None)
+    stats.add_argument("--trailing-stop-pct", type=float, default=None)
+    stats.add_argument("--confidence-threshold", type=float, default=0.0)
+    stats.add_argument("--min-volatility", type=float, default=0.0)
+    stats.add_argument("--trend-lookback", type=int, default=1)
+    stats.add_argument("--require-trend-alignment", action="store_true")
 
     tune = subparsers.add_parser("tune", help="Run a deterministic tuning grid.")
     tune.add_argument("--episodes", type=int, default=12)
@@ -84,7 +116,17 @@ def build_parser() -> argparse.ArgumentParser:
     tune.add_argument("--max-leverage", type=float, default=1.0)
     tune.add_argument("--cost-bps", type=float, default=1.0)
     tune.add_argument("--min-quantity", type=float, default=0.0)
+    tune.add_argument("--breakeven-trigger-pct", type=float, default=None)
+    tune.add_argument("--breakeven-trigger-pcts", default="none")
+    tune.add_argument("--trailing-stop-pct", type=float, default=None)
+    tune.add_argument("--trailing-stop-pcts", default="none")
+    tune.add_argument("--confidence-thresholds", default="0")
+    tune.add_argument("--min-volatilities", default="0")
+    tune.add_argument("--trend-lookbacks", default="1")
+    tune.add_argument("--trend-alignments", default="false")
     tune.add_argument("--drawdown-penalty", type=float, default=0.25)
+    tune.add_argument("--objective", choices=("risk_adjusted", "profit_factor", "return_drawdown", "reward"), default="risk_adjusted")
+    tune.add_argument("--min-trades", type=int, default=1)
 
     validate = subparsers.add_parser("validate", help="Tune on a CSV train split and evaluate on holdout.")
     validate.add_argument("--csv", required=True)
@@ -104,7 +146,17 @@ def build_parser() -> argparse.ArgumentParser:
     validate.add_argument("--max-leverage", type=float, default=1.0)
     validate.add_argument("--cost-bps", type=float, default=1.0)
     validate.add_argument("--min-quantity", type=float, default=0.0)
+    validate.add_argument("--breakeven-trigger-pct", type=float, default=None)
+    validate.add_argument("--breakeven-trigger-pcts", default="none")
+    validate.add_argument("--trailing-stop-pct", type=float, default=None)
+    validate.add_argument("--trailing-stop-pcts", default="none")
+    validate.add_argument("--confidence-thresholds", default="0")
+    validate.add_argument("--min-volatilities", default="0")
+    validate.add_argument("--trend-lookbacks", default="1")
+    validate.add_argument("--trend-alignments", default="false")
     validate.add_argument("--drawdown-penalty", type=float, default=0.25)
+    validate.add_argument("--objective", choices=("risk_adjusted", "profit_factor", "return_drawdown", "reward"), default="risk_adjusted")
+    validate.add_argument("--min-trades", type=int, default=1)
 
     trade = subparsers.add_parser("trade", help="Run one paper/live exchange-connected trading tick.")
     trade.add_argument("--mode", choices=("paper", "live"), default="paper")
@@ -130,6 +182,7 @@ def main(argv: list[str] | None = None) -> None:
                     learning_rate=args.learning_rate,
                     trace_decay=args.trace_decay,
                     money_management=_money_management_from_args(args),
+                    strategy_filter=_strategy_filter_from_args(args),
                 )
             )
         else:
@@ -148,7 +201,15 @@ def main(argv: list[str] | None = None) -> None:
             risk_per_trades=_parse_float_grid(args.risk_per_trades) if money_management else None,
             stop_loss_pcts=_parse_float_grid(args.stop_loss_pcts) if money_management else None,
             take_profit_pcts=_parse_optional_float_grid(args.take_profit_pcts) if money_management else None,
+            confidence_thresholds=_parse_float_grid(args.confidence_thresholds),
+            min_volatilities=_parse_float_grid(args.min_volatilities),
+            trend_lookbacks=_parse_int_grid(args.trend_lookbacks),
+            trend_alignment=_parse_bool_grid(args.trend_alignments),
+            breakeven_trigger_pcts=_parse_optional_float_grid(args.breakeven_trigger_pcts) if money_management else None,
+            trailing_stop_pcts=_parse_optional_float_grid(args.trailing_stop_pcts) if money_management else None,
             drawdown_penalty=args.drawdown_penalty,
+            objective=args.objective,
+            min_trades=args.min_trades,
         )
         print(format_tuning_report(trials, limit=args.limit))
         return
@@ -183,7 +244,15 @@ def main(argv: list[str] | None = None) -> None:
             risk_per_trades=_parse_float_grid(args.risk_per_trades) if money_management else None,
             stop_loss_pcts=_parse_float_grid(args.stop_loss_pcts) if money_management else None,
             take_profit_pcts=_parse_optional_float_grid(args.take_profit_pcts) if money_management else None,
+            confidence_thresholds=_parse_float_grid(args.confidence_thresholds),
+            min_volatilities=_parse_float_grid(args.min_volatilities),
+            trend_lookbacks=_parse_int_grid(args.trend_lookbacks),
+            trend_alignment=_parse_bool_grid(args.trend_alignments),
+            breakeven_trigger_pcts=_parse_optional_float_grid(args.breakeven_trigger_pcts) if money_management else None,
+            trailing_stop_pcts=_parse_optional_float_grid(args.trailing_stop_pcts) if money_management else None,
             drawdown_penalty=args.drawdown_penalty,
+            objective=args.objective,
+            min_trades=args.min_trades,
         )
         print(format_validation_report(result))
         return
