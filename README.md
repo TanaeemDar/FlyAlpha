@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-2E7D32)](LICENSE)
 [![Status](https://img.shields.io/badge/status-research%20scaffold-6A4C93)](#roadmap)
 
-![Janelia fly brain visual](docs/assets/janelia_fly_brain.jpg)
+![Janelia fly brain visual](docs/assets/janelia_fly_brain.gif)
 
 FlyAlpha is an open-source research scaffold for a financial-learning agent
 whose learning and decision loop is constrained by fruit-fly nervous-system
