@@ -101,20 +101,77 @@ tests/              smoke tests for the learning loop
 python -m pytest -q
 ```
 
-Run the toy conditioning loop:
+Use the centralized runner for local stats:
 
 ```bash
-python - <<'PY'
-from flyalpha.experiments import run_conditioning_demo
-from flyalpha.visualization import sparkline
-
-result = run_conditioning_demo(episodes=12)
-print("actions:", [action.value for action in result.actions])
-print("rewards:", [round(value, 4) for value in result.rewards])
-print("trace:  ", sparkline(result.rewards))
-print("weights:", result.learned_weights)
-PY
+python -m flyalpha.runner stats --episodes 12
 ```
+
+Tune the current mushroom-body plasticity parameters:
+
+```bash
+python -m flyalpha.runner tune --episodes 24 --limit 10
+```
+
+Run one safe paper-trading tick:
+
+```bash
+python -m flyalpha.runner trade --mode paper --symbol BTCUSD --action LONG --quantity 0.1
+```
+
+If installed as a package, the same commands are available through:
+
+```bash
+flyalpha stats --episodes 12
+flyalpha tune --episodes 24
+flyalpha trade --mode paper --symbol BTCUSD --action LONG --quantity 0.1
+```
+
+## Exchange Connectivity
+
+FlyAlpha separates the fly-learning core from exchange APIs:
+
+```text
+flyalpha.runner
+    |
+    v
+trading_loop.py
+    |
+    v
+ExchangeClient protocol
+    |
+    +-- PaperExchangeClient   local simulated fills
+    |
+    +-- RestExchangeClient    generic REST scaffold for crypto/forex APIs
+```
+
+Live trading is intentionally gated. A live order requires:
+
+- an exchange-specific REST base URL;
+- API credentials in environment variables;
+- the explicit `--i-understand-live-risk` flag;
+- a real adapter aligned to the chosen exchange's official API.
+
+Example shape:
+
+```bash
+export FLYALPHA_EXCHANGE_API_KEY="..."
+export FLYALPHA_EXCHANGE_API_SECRET="..."
+
+python -m flyalpha.runner trade \
+  --mode live \
+  --base-url "https://api.your-exchange.example" \
+  --symbol BTCUSD \
+  --action LONG \
+  --quantity 0.01 \
+  --i-understand-live-risk
+```
+
+The included `RestExchangeClient` expects generic `/ticker`, `/balance`, and
+`/order` JSON endpoints. Real exchanges usually differ in paths, signatures,
+symbols, order flags, rate limits, and compliance requirements, so production
+connectors should subclass or wrap this scaffold for Binance, Coinbase, OANDA,
+Alpaca, Interactive Brokers, or any other API-based crypto/forex venue.
 
 ## Scientific Controls
 
@@ -151,6 +208,9 @@ The included tests verify that:
 - dopamine changes only eligible KC-to-MBON synapses;
 - deterministic market features produce sensory spikes;
 - the conditioning demo creates learned weights.
+- the centralized runner accepts stats/tuning/trading commands;
+- paper exchange orders are recorded without network access;
+- live orders are blocked without explicit confirmation.
 
 ## Sources
 
