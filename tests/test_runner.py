@@ -38,6 +38,7 @@ def test_runner_accepts_pf_tuning_controls():
             "tune",
             "--objective",
             "profit_factor",
+            "--no-progress",
             "--confidence-thresholds",
             "0,0.1",
             "--trend-alignments",
@@ -48,4 +49,5 @@ def test_runner_accepts_pf_tuning_controls():
     )
 
     assert args.objective == "profit_factor"
+    assert args.no_progress is True
     assert args.confidence_thresholds == "0,0.1"

@@ -239,6 +239,9 @@ score = cumulative reward - drawdown_penalty * max drawdown
 Use `--objective profit_factor` to rank trials by PF instead. The report also
 shows profit factor and max drawdown for each trial.
 
+Tuning and validation display a `tqdm` progress bar by default. Add
+`--no-progress` when writing logs or running in CI.
+
 <details>
 <summary>PF-focused tuning with trade filters</summary>
 

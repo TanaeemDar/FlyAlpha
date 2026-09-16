@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import product
+
+from tqdm import tqdm
 
 from flyalpha.environment import MoneyManagementConfig
 from flyalpha.experiments.metrics import calculate_reward_metrics
@@ -62,88 +65,108 @@ def run_tuning_grid(
     drawdown_penalty: float = 0.25,
     objective: str = "risk_adjusted",
     min_trades: int = 1,
+    show_progress: bool = False,
+    progress_label: str = "tuning",
 ) -> list[TuningTrial]:
     """Run a deterministic grid over mushroom-body plasticity parameters."""
 
     trials: list[TuningTrial] = []
-    for learning_rate in learning_rates:
-        for trace_decay in trace_decays:
-            for risk_per_trade in risk_per_trades or (money_management.risk_per_trade if money_management else 0.0,):
-                for stop_loss_pct in stop_loss_pcts or (money_management.stop_loss_pct if money_management else 0.0,):
-                    for take_profit_pct in take_profit_pcts or (money_management.take_profit_pct if money_management else None,):
-                        for breakeven_trigger_pct in breakeven_trigger_pcts or (money_management.breakeven_trigger_pct if money_management else None,):
-                            for trailing_stop_pct in trailing_stop_pcts or (money_management.trailing_stop_pct if money_management else None,):
-                                trial_management = None
-                                if money_management:
-                                    trial_management = MoneyManagementConfig(
-                                        initial_equity=money_management.initial_equity,
-                                        risk_per_trade=risk_per_trade,
-                                        stop_loss_pct=stop_loss_pct,
-                                        take_profit_pct=take_profit_pct,
-                                        max_position_fraction=money_management.max_position_fraction,
-                                        max_leverage=money_management.max_leverage,
-                                        cost_bps=money_management.cost_bps,
-                                        min_quantity=money_management.min_quantity,
-                                        breakeven_trigger_pct=breakeven_trigger_pct,
-                                        trailing_stop_pct=trailing_stop_pct,
-                                    )
-                                for confidence_threshold in confidence_thresholds:
-                                    for min_volatility in min_volatilities:
-                                        for trend_lookback in trend_lookbacks:
-                                            for require_trend_alignment in trend_alignment:
-                                                strategy_filter = StrategyFilterConfig(
-                                                    confidence_threshold=confidence_threshold,
-                                                    min_volatility=min_volatility,
-                                                    trend_lookback=trend_lookback,
-                                                    require_trend_alignment=require_trend_alignment,
-                                                )
-                                                if candles is None:
-                                                    result = run_conditioning_demo(
-                                                        episodes=episodes,
-                                                        learning_rate=learning_rate,
-                                                        trace_decay=trace_decay,
-                                                        money_management=trial_management,
-                                                        strategy_filter=strategy_filter,
-                                                    )
-                                                else:
-                                                    result = run_conditioning_on_candles(
-                                                        candles,
-                                                        learning_rate=learning_rate,
-                                                        trace_decay=trace_decay,
-                                                        money_management=trial_management,
-                                                        strategy_filter=strategy_filter,
-                                                    )
-                                                metrics = calculate_reward_metrics(result.rewards)
-                                                active_trades = sum(1 for action in result.actions if action.value != "FLAT")
-                                                score = _score_trial(
-                                                    objective=objective,
-                                                    cumulative_reward=result.cumulative_reward,
-                                                    profit_factor=metrics.profit_factor,
-                                                    max_drawdown=metrics.max_drawdown,
-                                                    active_trades=active_trades,
-                                                    min_trades=min_trades,
-                                                    drawdown_penalty=drawdown_penalty,
-                                                )
-                                                trials.append(
-                                                    TuningTrial(
-                                                        learning_rate=learning_rate,
-                                                        trace_decay=trace_decay,
-                                                        risk_per_trade=risk_per_trade,
-                                                        stop_loss_pct=stop_loss_pct,
-                                                        take_profit_pct=take_profit_pct,
-                                                        confidence_threshold=confidence_threshold,
-                                                        min_volatility=min_volatility,
-                                                        trend_lookback=trend_lookback,
-                                                        require_trend_alignment=require_trend_alignment,
-                                                        breakeven_trigger_pct=breakeven_trigger_pct,
-                                                        trailing_stop_pct=trailing_stop_pct,
-                                                        cumulative_reward=result.cumulative_reward,
-                                                        profit_factor=metrics.profit_factor,
-                                                        max_drawdown=metrics.max_drawdown,
-                                                        score=score,
-                                                        learned_weights=len(result.learned_weights),
-                                                    )
-                                                )
+    trial_grid = list(
+        product(
+            learning_rates,
+            trace_decays,
+            risk_per_trades or (money_management.risk_per_trade if money_management else 0.0,),
+            stop_loss_pcts or (money_management.stop_loss_pct if money_management else 0.0,),
+            take_profit_pcts or (money_management.take_profit_pct if money_management else None,),
+            breakeven_trigger_pcts or (money_management.breakeven_trigger_pct if money_management else None,),
+            trailing_stop_pcts or (money_management.trailing_stop_pct if money_management else None,),
+            confidence_thresholds,
+            min_volatilities,
+            trend_lookbacks,
+            trend_alignment,
+        )
+    )
+    iterator = tqdm(trial_grid, desc=progress_label, unit="trial", disable=not show_progress)
+    for (
+        learning_rate,
+        trace_decay,
+        risk_per_trade,
+        stop_loss_pct,
+        take_profit_pct,
+        breakeven_trigger_pct,
+        trailing_stop_pct,
+        confidence_threshold,
+        min_volatility,
+        trend_lookback,
+        require_trend_alignment,
+    ) in iterator:
+        trial_management = None
+        if money_management:
+            trial_management = MoneyManagementConfig(
+                initial_equity=money_management.initial_equity,
+                risk_per_trade=risk_per_trade,
+                stop_loss_pct=stop_loss_pct,
+                take_profit_pct=take_profit_pct,
+                max_position_fraction=money_management.max_position_fraction,
+                max_leverage=money_management.max_leverage,
+                cost_bps=money_management.cost_bps,
+                min_quantity=money_management.min_quantity,
+                breakeven_trigger_pct=breakeven_trigger_pct,
+                trailing_stop_pct=trailing_stop_pct,
+            )
+        strategy_filter = StrategyFilterConfig(
+            confidence_threshold=confidence_threshold,
+            min_volatility=min_volatility,
+            trend_lookback=trend_lookback,
+            require_trend_alignment=require_trend_alignment,
+        )
+        if candles is None:
+            result = run_conditioning_demo(
+                episodes=episodes,
+                learning_rate=learning_rate,
+                trace_decay=trace_decay,
+                money_management=trial_management,
+                strategy_filter=strategy_filter,
+            )
+        else:
+            result = run_conditioning_on_candles(
+                candles,
+                learning_rate=learning_rate,
+                trace_decay=trace_decay,
+                money_management=trial_management,
+                strategy_filter=strategy_filter,
+            )
+        metrics = calculate_reward_metrics(result.rewards)
+        active_trades = sum(1 for action in result.actions if action.value != "FLAT")
+        score = _score_trial(
+            objective=objective,
+            cumulative_reward=result.cumulative_reward,
+            profit_factor=metrics.profit_factor,
+            max_drawdown=metrics.max_drawdown,
+            active_trades=active_trades,
+            min_trades=min_trades,
+            drawdown_penalty=drawdown_penalty,
+        )
+        trials.append(
+            TuningTrial(
+                learning_rate=learning_rate,
+                trace_decay=trace_decay,
+                risk_per_trade=risk_per_trade,
+                stop_loss_pct=stop_loss_pct,
+                take_profit_pct=take_profit_pct,
+                confidence_threshold=confidence_threshold,
+                min_volatility=min_volatility,
+                trend_lookback=trend_lookback,
+                require_trend_alignment=require_trend_alignment,
+                breakeven_trigger_pct=breakeven_trigger_pct,
+                trailing_stop_pct=trailing_stop_pct,
+                cumulative_reward=result.cumulative_reward,
+                profit_factor=metrics.profit_factor,
+                max_drawdown=metrics.max_drawdown,
+                score=score,
+                learned_weights=len(result.learned_weights),
+            )
+        )
     return sorted(trials, key=lambda trial: trial.score, reverse=True)
 
 
@@ -211,6 +234,7 @@ def run_train_test_validation(
     drawdown_penalty: float = 0.25,
     objective: str = "risk_adjusted",
     min_trades: int = 1,
+    show_progress: bool = False,
 ) -> ValidationResult:
     """Tune on an in-sample slice and evaluate the winner out of sample."""
 
@@ -237,6 +261,8 @@ def run_train_test_validation(
         drawdown_penalty=drawdown_penalty,
         objective=objective,
         min_trades=min_trades,
+        show_progress=show_progress,
+        progress_label="train tuning",
     )
     best = train_trials[0]
     test_trials = run_tuning_grid(
@@ -256,6 +282,8 @@ def run_train_test_validation(
         drawdown_penalty=drawdown_penalty,
         objective=objective,
         min_trades=min_trades,
+        show_progress=show_progress,
+        progress_label="holdout eval",
     )
     return ValidationResult(
         train_best=best,

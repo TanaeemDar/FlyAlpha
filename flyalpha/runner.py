@@ -127,6 +127,7 @@ def build_parser() -> argparse.ArgumentParser:
     tune.add_argument("--drawdown-penalty", type=float, default=0.25)
     tune.add_argument("--objective", choices=("risk_adjusted", "profit_factor", "return_drawdown", "reward"), default="risk_adjusted")
     tune.add_argument("--min-trades", type=int, default=1)
+    tune.add_argument("--no-progress", action="store_true")
 
     validate = subparsers.add_parser("validate", help="Tune on a CSV train split and evaluate on holdout.")
     validate.add_argument("--csv", required=True)
@@ -157,6 +158,7 @@ def build_parser() -> argparse.ArgumentParser:
     validate.add_argument("--drawdown-penalty", type=float, default=0.25)
     validate.add_argument("--objective", choices=("risk_adjusted", "profit_factor", "return_drawdown", "reward"), default="risk_adjusted")
     validate.add_argument("--min-trades", type=int, default=1)
+    validate.add_argument("--no-progress", action="store_true")
 
     trade = subparsers.add_parser("trade", help="Run one paper/live exchange-connected trading tick.")
     trade.add_argument("--mode", choices=("paper", "live"), default="paper")
@@ -210,6 +212,7 @@ def main(argv: list[str] | None = None) -> None:
             drawdown_penalty=args.drawdown_penalty,
             objective=args.objective,
             min_trades=args.min_trades,
+            show_progress=not args.no_progress,
         )
         print(format_tuning_report(trials, limit=args.limit))
         return
@@ -253,6 +256,7 @@ def main(argv: list[str] | None = None) -> None:
             drawdown_penalty=args.drawdown_penalty,
             objective=args.objective,
             min_trades=args.min_trades,
+            show_progress=not args.no_progress,
         )
         print(format_validation_report(result))
         return
