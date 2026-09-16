@@ -7,6 +7,7 @@ from collections import Counter
 
 from flyalpha.data import load_candles_csv
 from flyalpha.experiments.conditioning import ConditioningResult, run_conditioning_demo, run_conditioning_on_candles
+from flyalpha.experiments.metrics import calculate_reward_metrics
 from flyalpha.visualization import sparkline
 
 
@@ -23,6 +24,7 @@ def _format_summary(result: ConditioningResult, label: str) -> str:
     ]
     active_wins = sum(1 for reward in active_rewards if reward > 0)
     active_win_rate = active_wins / len(active_rewards) if active_rewards else 0.0
+    metrics = calculate_reward_metrics(rewards)
 
     lines = [
         "FlyAlpha conditioning stats",
@@ -34,6 +36,9 @@ def _format_summary(result: ConditioningResult, label: str) -> str:
         f"Bar win rate:      {win_rate:.2%}",
         f"Active trades:     {len(active_rewards)}",
         f"Active win rate:   {active_win_rate:.2%}",
+        f"Profit factor:     {metrics.profit_factor:.4f}",
+        f"Max drawdown:      {metrics.max_drawdown:.4f}",
+        f"Gross P/L:         {metrics.gross_profit:.4f} / -{metrics.gross_loss:.4f}",
         f"Actions:           {dict(action_counts)}",
         f"Learned weights:   {len(result.learned_weights)}",
         f"Best/Worst reward: {max(rewards):.4f} / {min(rewards):.4f}" if rewards else "Best/Worst reward: 0.0000 / 0.0000",
