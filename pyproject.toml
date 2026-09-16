@@ -1,0 +1,14 @@
+[project]
+name = "flyalpha"
+version = "0.1.0"
+description = "A Drosophila-connectome-inspired financial learning research scaffold."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "FlyAlpha contributors" }]
+keywords = ["connectome", "drosophila", "reinforcement-learning", "spiking-neural-network", "finance"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
