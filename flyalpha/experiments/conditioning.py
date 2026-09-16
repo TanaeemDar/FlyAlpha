@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from flyalpha.actions import TradingAction, action_from_population
-from flyalpha.environment import execute_position, reward_from_execution
+from flyalpha.environment import MoneyManagementConfig, execute_position, plan_position, reward_from_execution
 from flyalpha.mushroom_body import DopamineSignal, KCToMBONPlasticity, KenyonActivity
 from flyalpha.senses import MarketCandle, SpikeEncoder, encode_market_features
 
@@ -17,6 +17,8 @@ class ConditioningResult:
     rewards: tuple[float, ...]
     actions: tuple[TradingAction, ...]
     learned_weights: dict[tuple[str, str], float]
+    equity_curve: tuple[float, ...] = ()
+    quantities: tuple[float, ...] = ()
 
     @property
     def cumulative_reward(self) -> float:
@@ -38,6 +40,7 @@ def run_conditioning_demo(
     episodes: int = 12,
     learning_rate: float = 0.1,
     trace_decay: float = 0.6,
+    money_management: MoneyManagementConfig | None = None,
 ) -> ConditioningResult:
     """Condition a fly-like memory to favor LONG in a rising toy market."""
 
@@ -45,6 +48,9 @@ def run_conditioning_demo(
     previous = MarketCandle(open=100.0, high=101.0, low=99.0, close=100.0, volume=1000.0)
     rewards: list[float] = []
     actions: list[TradingAction] = []
+    equity_curve: list[float] = []
+    quantities: list[float] = []
+    equity = money_management.initial_equity if money_management else 0.0
     expected_reward = 0.0
 
     for episode in range(episodes):
@@ -61,8 +67,25 @@ def run_conditioning_demo(
         action = action_from_population(population)
         plasticity.activate(kenyon_activity, population)
 
-        execution = execute_position(action, previous, current)
+        if money_management:
+            plan = plan_position(action, previous, equity, money_management)
+            execution = execute_position(
+                plan.action,
+                previous,
+                current,
+                cost_bps=money_management.cost_bps,
+                quantity=plan.quantity,
+                stop_price=plan.stop_price,
+                take_profit_price=plan.take_profit_price,
+            )
+            action = plan.action
+        else:
+            execution = execute_position(action, previous, current)
         reward = reward_from_execution(execution)
+        if money_management:
+            equity += reward
+            equity_curve.append(equity)
+            quantities.append(execution.quantity)
         rpe = reward - expected_reward
         expected_reward += 0.2 * rpe
         plasticity.apply_dopamine(DopamineSignal.from_prediction_error(rpe))
@@ -75,6 +98,8 @@ def run_conditioning_demo(
         rewards=tuple(rewards),
         actions=tuple(actions),
         learned_weights=dict(plasticity.weights),
+        equity_curve=tuple(equity_curve),
+        quantities=tuple(quantities),
     )
 
 
@@ -82,6 +107,7 @@ def run_conditioning_on_candles(
     candles: list[MarketCandle],
     learning_rate: float = 0.1,
     trace_decay: float = 0.6,
+    money_management: MoneyManagementConfig | None = None,
 ) -> ConditioningResult:
     """Run the same fly-learning loop over existing candle data."""
 
@@ -91,6 +117,9 @@ def run_conditioning_on_candles(
     plasticity = KCToMBONPlasticity(learning_rate=learning_rate, trace_decay=trace_decay)
     rewards: list[float] = []
     actions: list[TradingAction] = []
+    equity_curve: list[float] = []
+    quantities: list[float] = []
+    equity = money_management.initial_equity if money_management else 0.0
     expected_reward = 0.0
 
     for previous, current in zip(candles, candles[1:]):
@@ -100,8 +129,25 @@ def run_conditioning_on_candles(
         action = action_from_population(population)
         plasticity.activate(kenyon_activity, population)
 
-        execution = execute_position(action, previous, current)
+        if money_management:
+            plan = plan_position(action, previous, equity, money_management)
+            execution = execute_position(
+                plan.action,
+                previous,
+                current,
+                cost_bps=money_management.cost_bps,
+                quantity=plan.quantity,
+                stop_price=plan.stop_price,
+                take_profit_price=plan.take_profit_price,
+            )
+            action = plan.action
+        else:
+            execution = execute_position(action, previous, current)
         reward = reward_from_execution(execution)
+        if money_management:
+            equity += reward
+            equity_curve.append(equity)
+            quantities.append(execution.quantity)
         rpe = reward - expected_reward
         expected_reward += 0.2 * rpe
         plasticity.apply_dopamine(DopamineSignal.from_prediction_error(rpe))
@@ -113,4 +159,6 @@ def run_conditioning_on_candles(
         rewards=tuple(rewards),
         actions=tuple(actions),
         learned_weights=dict(plasticity.weights),
+        equity_curve=tuple(equity_curve),
+        quantities=tuple(quantities),
     )

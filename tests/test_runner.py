@@ -22,3 +22,11 @@ def test_runner_accepts_csv_stats_command():
     assert args.command == "stats"
     assert args.csv == "data.csv"
     assert args.limit == 100
+
+
+def test_runner_accepts_validate_command():
+    args = build_parser().parse_args(["validate", "--csv", "data.csv", "--train-fraction", "0.6"])
+
+    assert args.command == "validate"
+    assert args.csv == "data.csv"
+    assert args.train_fraction == 0.6

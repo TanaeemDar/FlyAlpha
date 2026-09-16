@@ -6,6 +6,7 @@ import argparse
 from collections import Counter
 
 from flyalpha.data import load_candles_csv
+from flyalpha.environment import MoneyManagementConfig
 from flyalpha.experiments.conditioning import ConditioningResult, run_conditioning_demo, run_conditioning_on_candles
 from flyalpha.experiments.metrics import calculate_reward_metrics
 from flyalpha.visualization import sparkline
@@ -25,6 +26,8 @@ def _format_summary(result: ConditioningResult, label: str) -> str:
     active_wins = sum(1 for reward in active_rewards if reward > 0)
     active_win_rate = active_wins / len(active_rewards) if active_rewards else 0.0
     metrics = calculate_reward_metrics(rewards)
+    final_equity = result.equity_curve[-1] if result.equity_curve else None
+    average_quantity = sum(result.quantities) / len(result.quantities) if result.quantities else 0.0
 
     lines = [
         "FlyAlpha conditioning stats",
@@ -32,6 +35,7 @@ def _format_summary(result: ConditioningResult, label: str) -> str:
         f"Dataset:           {label}",
         f"Episodes:          {len(rewards)}",
         f"Cumulative reward: {result.cumulative_reward:.4f}",
+        f"Final equity:      {final_equity:.4f}" if final_equity is not None else "Final equity:      n/a",
         f"Average reward:    {average_reward:.4f}",
         f"Bar win rate:      {win_rate:.2%}",
         f"Active trades:     {len(active_rewards)}",
@@ -39,6 +43,7 @@ def _format_summary(result: ConditioningResult, label: str) -> str:
         f"Profit factor:     {metrics.profit_factor:.4f}",
         f"Max drawdown:      {metrics.max_drawdown:.4f}",
         f"Gross P/L:         {metrics.gross_profit:.4f} / -{metrics.gross_loss:.4f}",
+        f"Average quantity:  {average_quantity:.6f}",
         f"Actions:           {dict(action_counts)}",
         f"Learned weights:   {len(result.learned_weights)}",
         f"Best/Worst reward: {max(rewards):.4f} / {min(rewards):.4f}" if rewards else "Best/Worst reward: 0.0000 / 0.0000",
@@ -47,8 +52,11 @@ def _format_summary(result: ConditioningResult, label: str) -> str:
     return "\n".join(lines)
 
 
-def summarize(episodes: int) -> str:
-    return _format_summary(run_conditioning_demo(episodes=episodes), label="toy-conditioning")
+def summarize(episodes: int, money_management: MoneyManagementConfig | None = None) -> str:
+    return _format_summary(
+        run_conditioning_demo(episodes=episodes, money_management=money_management),
+        label="toy-conditioning",
+    )
 
 
 def summarize_csv(
@@ -56,12 +64,14 @@ def summarize_csv(
     limit: int | None = None,
     learning_rate: float = 0.1,
     trace_decay: float = 0.6,
+    money_management: MoneyManagementConfig | None = None,
 ) -> str:
     candles = load_candles_csv(csv_path, limit=limit)
     result = run_conditioning_on_candles(
         candles,
         learning_rate=learning_rate,
         trace_decay=trace_decay,
+        money_management=money_management,
     )
     return _format_summary(result, label=csv_path)
 

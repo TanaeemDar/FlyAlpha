@@ -119,6 +119,32 @@ Run stats on an existing OHLCV CSV:
 python -m flyalpha.runner stats --csv path/to/candles.csv
 ```
 
+By default, CSV stats use conservative money management:
+
+```text
+initial equity         10000
+risk per trade         1%
+stop loss              1%
+take profit            2%
+max position fraction  100%
+max leverage           1x
+transaction cost       1 bp
+```
+
+Override those controls:
+
+```bash
+python -m flyalpha.runner stats \
+  --csv path/to/candles.csv \
+  --initial-equity 10000 \
+  --risk-per-trade 0.005 \
+  --stop-loss-pct 0.005 \
+  --take-profit-pct 0.01 \
+  --max-position-fraction 0.5 \
+  --max-leverage 1 \
+  --cost-bps 2
+```
+
 Tune against an existing CSV:
 
 ```bash
@@ -126,8 +152,32 @@ python -m flyalpha.runner tune \
   --csv path/to/candles.csv \
   --learning-rates 0.01,0.05,0.1,0.2 \
   --trace-decays 0.4,0.6,0.8 \
+  --risk-per-trades 0.005,0.01,0.02 \
+  --stop-loss-pcts 0.005,0.01,0.02 \
+  --take-profit-pcts 0.01,0.02,0.04 \
   --limit 10
 ```
+
+Run a train/test validation pass:
+
+```bash
+python -m flyalpha.runner validate \
+  --csv path/to/candles.csv \
+  --train-fraction 0.7 \
+  --learning-rates 0.05,0.1 \
+  --trace-decays 0.4,0.8 \
+  --risk-per-trades 0.005,0.01 \
+  --stop-loss-pcts 0.005,0.01 \
+  --take-profit-pcts 0.01,0.02
+```
+
+Tuning is ranked by a risk-adjusted score:
+
+```text
+score = cumulative reward - drawdown_penalty * max drawdown
+```
+
+The report also shows profit factor and max drawdown for each trial.
 
 CSV files need these columns:
 
