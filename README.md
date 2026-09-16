@@ -17,6 +17,18 @@ The core rule is simple:
 > decisions come from fly-inspired spiking dynamics; learning is localized to a
 > mushroom-body-inspired dopamine plasticity layer.
 
+## Contents
+
+- [Why This Exists](#why-this-exists)
+- [Visual Overview](#visual-overview)
+- [Fly Brain Activities](#fly-brain-activities-we-use)
+- [Quick Start](#quick-start)
+- [CSV Backtesting](#csv-backtesting)
+- [Tuning](#tuning)
+- [Exchange Connectivity](#exchange-connectivity)
+- [Scientific Controls](#scientific-controls)
+- [Sources](#sources)
+
 ```text
         MARKET CANDLES
   OHLCV / return / range / volume
@@ -78,6 +90,10 @@ market sensory spikes -> fly-inspired CNS -> Kenyon cells
 
 ![Sample metrics panel](docs/assets/flyalpha_metrics_panel.svg)
 
+The GIF and graph panels are presentation visuals for the repository. The
+Janelia image is attributed in [Sources](#sources); the generated FlyAlpha
+assets are not biological reconstructions.
+
 ## Fly Brain Activities We Use
 
 | Fly activity | FlyAlpha role |
@@ -113,6 +129,8 @@ data/sample/        small OHLCV dataset for README demos and local checks
 
 ## Quick Start
 
+Run the smoke tests:
+
 ```bash
 python -m pytest -q
 ```
@@ -129,12 +147,6 @@ Tune the current mushroom-body plasticity parameters:
 python -m flyalpha.runner tune --episodes 24 --limit 10
 ```
 
-Run stats on an existing OHLCV CSV:
-
-```bash
-python -m flyalpha.runner stats --csv path/to/candles.csv
-```
-
 Run the committed sample dataset:
 
 ```bash
@@ -144,6 +156,14 @@ python -m flyalpha.runner stats --csv data/sample/flyalpha_sample_ohlcv.csv
 The sample should produce a compact report including final equity, PF, MDD,
 active trades, learned weights, and an ASCII reward trace. It is synthetic demo
 data, not evidence of market edge.
+
+## CSV Backtesting
+
+Run stats on an existing OHLCV CSV:
+
+```bash
+python -m flyalpha.runner stats --csv path/to/candles.csv
+```
 
 By default, CSV stats use conservative money management:
 
@@ -170,6 +190,17 @@ python -m flyalpha.runner stats \
   --max-leverage 1 \
   --cost-bps 2
 ```
+
+CSV files need these columns:
+
+```text
+open,high,low,close,volume
+```
+
+Column names are case-insensitive, and extra columns such as `timestamp` or
+`symbol` are ignored.
+
+## Tuning
 
 Tune against an existing CSV:
 
@@ -199,7 +230,17 @@ python -m flyalpha.runner tune \
   --limit 5
 ```
 
-PF-focused tuning with trade filters:
+Tuning is ranked by a risk-adjusted score by default:
+
+```text
+score = cumulative reward - drawdown_penalty * max drawdown
+```
+
+Use `--objective profit_factor` to rank trials by PF instead. The report also
+shows profit factor and max drawdown for each trial.
+
+<details>
+<summary>PF-focused tuning with trade filters</summary>
 
 ```bash
 python -m flyalpha.runner tune \
@@ -221,6 +262,8 @@ python -m flyalpha.runner tune \
   --limit 15
 ```
 
+</details>
+
 Run a train/test validation pass:
 
 ```bash
@@ -233,23 +276,6 @@ python -m flyalpha.runner validate \
   --stop-loss-pcts 0.005,0.01 \
   --take-profit-pcts 0.01,0.02
 ```
-
-Tuning is ranked by a risk-adjusted score:
-
-```text
-score = cumulative reward - drawdown_penalty * max drawdown
-```
-
-The report also shows profit factor and max drawdown for each trial.
-
-CSV files need these columns:
-
-```text
-open,high,low,close,volume
-```
-
-Column names are case-insensitive, and extra columns such as `timestamp` or
-`symbol` are ignored.
 
 Run one safe paper-trading tick:
 
@@ -345,10 +371,10 @@ The included tests verify that:
 - spikes propagate through the neural graph;
 - dopamine changes only eligible KC-to-MBON synapses;
 - deterministic market features produce sensory spikes;
-- the conditioning demo creates learned weights.
+- the conditioning demo creates learned weights;
 - the centralized runner accepts stats/tuning/trading commands;
 - paper exchange orders are recorded without network access;
-- live orders are blocked without explicit confirmation.
+- live orders are blocked without explicit confirmation;
 - sample CSV loading and PF/MDD reporting work locally.
 
 ## Sources
