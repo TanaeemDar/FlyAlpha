@@ -34,10 +34,14 @@ def _kenyon_from_market(previous: MarketCandle, current: MarketCandle) -> Kenyon
     return KenyonActivity(active_cells=frozenset(active_cells))
 
 
-def run_conditioning_demo(episodes: int = 12) -> ConditioningResult:
+def run_conditioning_demo(
+    episodes: int = 12,
+    learning_rate: float = 0.1,
+    trace_decay: float = 0.6,
+) -> ConditioningResult:
     """Condition a fly-like memory to favor LONG in a rising toy market."""
 
-    plasticity = KCToMBONPlasticity(learning_rate=0.1, trace_decay=0.6)
+    plasticity = KCToMBONPlasticity(learning_rate=learning_rate, trace_decay=trace_decay)
     previous = MarketCandle(open=100.0, high=101.0, low=99.0, close=100.0, volume=1000.0)
     rewards: list[float] = []
     actions: list[TradingAction] = []
@@ -72,4 +76,3 @@ def run_conditioning_demo(episodes: int = 12) -> ConditioningResult:
         actions=tuple(actions),
         learned_weights=dict(plasticity.weights),
     )
-

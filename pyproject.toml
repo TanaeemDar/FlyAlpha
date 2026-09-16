@@ -8,6 +8,9 @@ license = { text = "MIT" }
 authors = [{ name = "FlyAlpha contributors" }]
 keywords = ["connectome", "drosophila", "reinforcement-learning", "spiking-neural-network", "finance"]
 
+[project.scripts]
+flyalpha = "flyalpha.runner:main"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
