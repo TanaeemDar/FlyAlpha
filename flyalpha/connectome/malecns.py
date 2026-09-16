@@ -13,7 +13,7 @@ MALECNS_PROVENANCE = {
     "dataset": "MaleCNS v1.0",
     "organism": "Drosophila melanogaster, adult male",
     "scope": "central brain, optic lobes, and ventral nerve cord",
-    "license": "CC BY 4.0",
+    "license": "CC-BY",
     "released": "2026-06-08",
     "publication": "Cell, 2026-09-03",
     "source": "https://www.janelia.org/project-team/flyem/male-cns-connectome",
@@ -45,4 +45,3 @@ class SynapseEdge:
         if self.synapse_count <= 0:
             return 0.0
         return 1.0 + min(self.synapse_count, 100) / 100.0
-
