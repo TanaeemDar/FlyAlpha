@@ -17,11 +17,12 @@ def test_runner_accepts_tune_command():
 
 
 def test_runner_accepts_csv_stats_command():
-    args = build_parser().parse_args(["stats", "--csv", "data.csv", "--limit", "100"])
+    args = build_parser().parse_args(["stats", "--csv", "data.csv", "--limit", "100", "--save-report"])
 
     assert args.command == "stats"
     assert args.csv == "data.csv"
     assert args.limit == 100
+    assert args.save_report is True
 
 
 def test_runner_accepts_validate_command():
@@ -39,6 +40,7 @@ def test_runner_accepts_pf_tuning_controls():
             "--objective",
             "profit_factor",
             "--no-progress",
+            "--save-report",
             "--confidence-thresholds",
             "0,0.1",
             "--trend-alignments",
@@ -50,6 +52,7 @@ def test_runner_accepts_pf_tuning_controls():
 
     assert args.objective == "profit_factor"
     assert args.no_progress is True
+    assert args.save_report is True
     assert args.confidence_thresholds == "0,0.1"
 
 

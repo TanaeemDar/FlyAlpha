@@ -23,6 +23,7 @@ The core rule is simple:
 - [Visual Overview](#visual-overview)
 - [Fly Brain Activities](#fly-brain-activities-we-use)
 - [Quick Start](#quick-start)
+- [Saved Runs](#saved-runs)
 - [CSV Backtesting](#csv-backtesting)
 - [Tuning](#tuning)
 - [Ablations And Credit Assignment](#ablations-and-credit-assignment)
@@ -157,6 +158,42 @@ python -m flyalpha.runner stats --csv data/sample/flyalpha_sample_ohlcv.csv
 The sample should produce a compact report including final equity, PF, MDD,
 active trades, learned weights, and an ASCII reward trace. It is synthetic demo
 data, not evidence of market edge.
+
+## Saved Runs
+
+Before adding full MaleCNS execution complexity, FlyAlpha keeps runs
+reproducible and comparable. Add `--save-report` to stats, tune, or validate:
+
+```bash
+python -m flyalpha.runner stats \
+  --csv path/to/candles.csv \
+  --save-report
+
+python -m flyalpha.runner tune \
+  --csv path/to/candles.csv \
+  --objective profit_factor \
+  --save-report
+
+python -m flyalpha.runner validate \
+  --csv path/to/candles.csv \
+  --train-fraction 0.7 \
+  --objective profit_factor \
+  --save-report
+```
+
+Reports are saved under `runs/`:
+
+```text
+runs/YYYYMMDD_HHMMSS_stats/
+  config.json
+  summary.json
+  equity_curve.csv
+
+runs/YYYYMMDD_HHMMSS_tune/
+  config.json
+  summary.json
+  tuning_results.csv
+```
 
 ## CSV Backtesting
 
@@ -300,7 +337,8 @@ python -m flyalpha.runner walk-forward \
   --min-trades 20
 ```
 
-Reports are written under `runs/` and include CSV/JSON summaries.
+Walk-forward, ablation, and credit-assignment commands always write CSV/JSON
+summaries under `runs/`.
 
 ## Ablations And Credit Assignment
 

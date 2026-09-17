@@ -8,12 +8,13 @@ from flyalpha.data import load_candles_csv
 from flyalpha.environment import MoneyManagementConfig
 from flyalpha.experiments.ablation import run_ablation_suite
 from flyalpha.experiments.credit import run_credit_assignment_grid
-from flyalpha.experiments.reporting import create_run_dir, write_json, write_rows_csv
+from flyalpha.experiments.reporting import create_run_dir, result_summary, write_equity_curve, write_json, write_rows_csv
 from flyalpha.experiments.stats import summarize
 from flyalpha.experiments.stats import summarize_csv
 from flyalpha.experiments.strategy import StrategyFilterConfig
 from flyalpha.experiments.tuning import format_tuning_report, format_validation_report, run_train_test_validation, run_tuning_grid
 from flyalpha.experiments.walk_forward import run_walk_forward
+from flyalpha.experiments.conditioning import run_conditioning_demo, run_conditioning_on_candles
 from flyalpha.actions import TradingAction
 from flyalpha.trading_loop import run_trading_once
 
@@ -108,6 +109,8 @@ def build_parser() -> argparse.ArgumentParser:
     stats.add_argument("--min-volatility", type=float, default=0.0)
     stats.add_argument("--trend-lookback", type=int, default=1)
     stats.add_argument("--require-trend-alignment", action="store_true")
+    stats.add_argument("--save-report", action="store_true")
+    stats.add_argument("--report-dir", default="runs")
 
     tune = subparsers.add_parser("tune", help="Run a deterministic tuning grid.")
     tune.add_argument("--episodes", type=int, default=12)
@@ -140,6 +143,8 @@ def build_parser() -> argparse.ArgumentParser:
     tune.add_argument("--objective", choices=("risk_adjusted", "profit_factor", "return_drawdown", "reward"), default="risk_adjusted")
     tune.add_argument("--min-trades", type=int, default=1)
     tune.add_argument("--no-progress", action="store_true")
+    tune.add_argument("--save-report", action="store_true")
+    tune.add_argument("--report-dir", default="runs")
 
     validate = subparsers.add_parser("validate", help="Tune on a CSV train split and evaluate on holdout.")
     validate.add_argument("--csv", required=True)
@@ -171,6 +176,8 @@ def build_parser() -> argparse.ArgumentParser:
     validate.add_argument("--objective", choices=("risk_adjusted", "profit_factor", "return_drawdown", "reward"), default="risk_adjusted")
     validate.add_argument("--min-trades", type=int, default=1)
     validate.add_argument("--no-progress", action="store_true")
+    validate.add_argument("--save-report", action="store_true")
+    validate.add_argument("--report-dir", default="runs")
 
     walk = subparsers.add_parser("walk-forward", help="Run repeated train/test windows and save a report.")
     walk.add_argument("--csv", required=True)
@@ -262,19 +269,36 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
 
     if args.command == "stats":
+        money_management = _money_management_from_args(args)
+        strategy_filter = _strategy_filter_from_args(args)
         if args.csv:
+            candles = load_candles_csv(args.csv, limit=args.limit)
+            result = run_conditioning_on_candles(
+                candles,
+                learning_rate=args.learning_rate,
+                trace_decay=args.trace_decay,
+                money_management=money_management,
+                strategy_filter=strategy_filter,
+            )
             print(
                 summarize_csv(
                     csv_path=args.csv,
                     limit=args.limit,
                     learning_rate=args.learning_rate,
                     trace_decay=args.trace_decay,
-                    money_management=_money_management_from_args(args),
-                    strategy_filter=_strategy_filter_from_args(args),
+                    money_management=money_management,
+                    strategy_filter=strategy_filter,
                 )
             )
         else:
-            print(summarize(episodes=args.episodes, money_management=_money_management_from_args(args)))
+            result = run_conditioning_demo(episodes=args.episodes, money_management=money_management)
+            print(summarize(episodes=args.episodes, money_management=money_management))
+        if args.save_report:
+            run_dir = create_run_dir(args.report_dir, "stats")
+            write_json(run_dir / "config.json", vars(args))
+            write_json(run_dir / "summary.json", result_summary(result))
+            write_equity_curve(run_dir / "equity_curve.csv", result)
+            print(f"Saved stats report: {run_dir}")
         return
 
     if args.command == "tune":
@@ -301,6 +325,12 @@ def main(argv: list[str] | None = None) -> None:
             show_progress=not args.no_progress,
         )
         print(format_tuning_report(trials, limit=args.limit))
+        if args.save_report:
+            run_dir = create_run_dir(args.report_dir, "tune")
+            write_json(run_dir / "config.json", vars(args))
+            write_json(run_dir / "summary.json", {"best": trials[0], "trial_count": len(trials)})
+            write_rows_csv(run_dir / "tuning_results.csv", [trial.__dict__ for trial in trials])
+            print(f"Saved tuning report: {run_dir}")
         return
 
     if args.command == "trade":
@@ -345,6 +375,18 @@ def main(argv: list[str] | None = None) -> None:
             show_progress=not args.no_progress,
         )
         print(format_validation_report(result))
+        if args.save_report:
+            run_dir = create_run_dir(args.report_dir, "validate")
+            write_json(run_dir / "config.json", vars(args))
+            write_json(run_dir / "summary.json", result)
+            write_rows_csv(
+                run_dir / "validation.csv",
+                [
+                    {"split": "train", **result.train_best.__dict__},
+                    {"split": "test", **result.test_trial.__dict__},
+                ],
+            )
+            print(f"Saved validation report: {run_dir}")
         return
 
     if args.command == "walk-forward":
