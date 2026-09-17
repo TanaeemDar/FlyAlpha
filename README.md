@@ -25,6 +25,7 @@ The core rule is simple:
 - [Quick Start](#quick-start)
 - [CSV Backtesting](#csv-backtesting)
 - [Tuning](#tuning)
+- [Ablations And Credit Assignment](#ablations-and-credit-assignment)
 - [Exchange Connectivity](#exchange-connectivity)
 - [Scientific Controls](#scientific-controls)
 - [Sources](#sources)
@@ -280,6 +281,66 @@ python -m flyalpha.runner validate \
   --take-profit-pcts 0.01,0.02
 ```
 
+Run walk-forward validation and save a report:
+
+```bash
+python -m flyalpha.runner walk-forward \
+  --csv path/to/candles.csv \
+  --train-size 35000 \
+  --test-size 15000 \
+  --step-size 15000 \
+  --learning-rates 0.02,0.05,0.1 \
+  --trace-decays 0.6,0.8 \
+  --risk-per-trades 0.001,0.0025,0.005 \
+  --stop-loss-pcts 0.01,0.02 \
+  --take-profit-pcts 0.01,0.02,0.04 \
+  --trend-lookback 12 \
+  --require-trend-alignment \
+  --objective profit_factor \
+  --min-trades 20
+```
+
+Reports are written under `runs/` and include CSV/JSON summaries.
+
+## Ablations And Credit Assignment
+
+Run the core learning-control ablations:
+
+```bash
+python -m flyalpha.runner ablate \
+  --csv path/to/candles.csv \
+  --csv-limit 50000 \
+  --controls full,dopamine_disabled,plasticity_frozen,random_reward,reward_delay_12,degree_preserving_random \
+  --learning-rate 0.05 \
+  --trace-decay 0.8 \
+  --risk-per-trade 0.001 \
+  --stop-loss-pct 0.01 \
+  --take-profit-pct 0.04 \
+  --trend-lookback 12 \
+  --require-trend-alignment
+```
+
+Run credit-assignment delay experiments:
+
+```bash
+python -m flyalpha.runner credit \
+  --csv path/to/candles.csv \
+  --csv-limit 50000 \
+  --reward-delays 0,1,3,6,12 \
+  --trace-decays 0.4,0.6,0.8,0.95 \
+  --learning-rate 0.05 \
+  --risk-per-trade 0.001 \
+  --stop-loss-pct 0.01 \
+  --take-profit-pct 0.04 \
+  --trend-lookback 12 \
+  --require-trend-alignment
+```
+
+`degree_preserving_random` is scaffolded as a connectome-graph rewiring utility
+that preserves in-degree, out-degree, sparsity, and synaptic weights. It becomes
+an executable ablation once a real MaleCNS graph loader is connected to the
+simulation path.
+
 Run one safe paper-trading tick:
 
 ```bash
@@ -352,6 +413,10 @@ Before financial claims, FlyAlpha should compare:
 | Randomized topology | Tests whether biological structure matters |
 | Random reward | Tests reward-signal specificity |
 | Reset memory | Tests whether learned KC-to-MBON weights explain adaptation |
+
+Randomized topology controls should preserve degree distribution, sparsity, and
+synapse-count statistics. Reward-delay controls test whether results are driven
+by the engineered credit-assignment bridge rather than the fly-inspired topology.
 
 ## Roadmap
 

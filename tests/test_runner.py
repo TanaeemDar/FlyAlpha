@@ -51,3 +51,15 @@ def test_runner_accepts_pf_tuning_controls():
     assert args.objective == "profit_factor"
     assert args.no_progress is True
     assert args.confidence_thresholds == "0,0.1"
+
+
+def test_runner_accepts_new_experiment_commands():
+    walk = build_parser().parse_args(
+        ["walk-forward", "--csv", "data.csv", "--train-size", "10", "--test-size", "5", "--step-size", "5"]
+    )
+    ablate = build_parser().parse_args(["ablate", "--csv", "data.csv", "--controls", "full,random_reward"])
+    credit = build_parser().parse_args(["credit", "--csv", "data.csv", "--reward-delays", "0,3"])
+
+    assert walk.command == "walk-forward"
+    assert ablate.controls == "full,random_reward"
+    assert credit.reward_delays == "0,3"

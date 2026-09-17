@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from random import Random
 
 from flyalpha.actions import TradingAction
 from flyalpha.environment import MoneyManagementConfig, execute_position, plan_position, reward_from_execution
 from flyalpha.mushroom_body import DopamineSignal, KCToMBONPlasticity, KenyonActivity
 from flyalpha.senses import MarketCandle, SpikeEncoder, encode_market_features
+from .controls import LearningControlConfig
 from .strategy import StrategyFilterConfig, action_from_readout
 
 
@@ -43,6 +45,7 @@ def run_conditioning_demo(
     trace_decay: float = 0.6,
     money_management: MoneyManagementConfig | None = None,
     strategy_filter: StrategyFilterConfig | None = None,
+    learning_control: LearningControlConfig | None = None,
 ) -> ConditioningResult:
     """Condition a fly-like memory to favor LONG in a rising toy market."""
 
@@ -53,7 +56,10 @@ def run_conditioning_demo(
     equity_curve: list[float] = []
     quantities: list[float] = []
     equity = money_management.initial_equity if money_management else 0.0
+    control = learning_control or LearningControlConfig()
     expected_reward = 0.0
+    delayed_rpes: list[float] = []
+    random_reward = Random(control.random_seed)
     history = [previous]
 
     for episode in range(episodes):
@@ -93,7 +99,7 @@ def run_conditioning_demo(
             quantities.append(execution.quantity)
         rpe = reward - expected_reward
         expected_reward += 0.2 * rpe
-        plasticity.apply_dopamine(DopamineSignal.from_prediction_error(rpe))
+        _apply_learning_signal(plasticity, rpe, delayed_rpes, control, random_reward)
 
         rewards.append(reward)
         actions.append(action)
@@ -115,6 +121,7 @@ def run_conditioning_on_candles(
     trace_decay: float = 0.6,
     money_management: MoneyManagementConfig | None = None,
     strategy_filter: StrategyFilterConfig | None = None,
+    learning_control: LearningControlConfig | None = None,
 ) -> ConditioningResult:
     """Run the same fly-learning loop over existing candle data."""
 
@@ -127,7 +134,10 @@ def run_conditioning_on_candles(
     equity_curve: list[float] = []
     quantities: list[float] = []
     equity = money_management.initial_equity if money_management else 0.0
+    control = learning_control or LearningControlConfig()
     expected_reward = 0.0
+    delayed_rpes: list[float] = []
+    random_reward = Random(control.random_seed)
     history = [candles[0]]
 
     for previous, current in zip(candles, candles[1:]):
@@ -160,7 +170,7 @@ def run_conditioning_on_candles(
             quantities.append(execution.quantity)
         rpe = reward - expected_reward
         expected_reward += 0.2 * rpe
-        plasticity.apply_dopamine(DopamineSignal.from_prediction_error(rpe))
+        _apply_learning_signal(plasticity, rpe, delayed_rpes, control, random_reward)
 
         rewards.append(reward)
         actions.append(action)
@@ -173,3 +183,26 @@ def run_conditioning_on_candles(
         equity_curve=tuple(equity_curve),
         quantities=tuple(quantities),
     )
+
+
+def _apply_learning_signal(
+    plasticity: KCToMBONPlasticity,
+    rpe: float,
+    delayed_rpes: list[float],
+    control: LearningControlConfig,
+    random_reward: Random,
+) -> None:
+    if not control.plasticity_enabled:
+        return
+    if not control.dopamine_enabled:
+        plasticity.apply_dopamine(DopamineSignal())
+        return
+
+    signal_rpe = rpe
+    if control.random_reward:
+        signal_rpe = abs(rpe) * random_reward.choice((-1.0, 1.0))
+
+    delayed_rpes.append(signal_rpe)
+    if len(delayed_rpes) <= control.reward_delay:
+        return
+    plasticity.apply_dopamine(DopamineSignal.from_prediction_error(delayed_rpes.pop(0)))
