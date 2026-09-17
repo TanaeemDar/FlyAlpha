@@ -27,6 +27,7 @@ The core rule is simple:
 - [CSV Backtesting](#csv-backtesting)
 - [Tuning](#tuning)
 - [Ablations And Credit Assignment](#ablations-and-credit-assignment)
+- [Latest Findings](#latest-findings)
 - [Exchange Connectivity](#exchange-connectivity)
 - [Scientific Controls](#scientific-controls)
 - [Sources](#sources)
@@ -378,6 +379,13 @@ python -m flyalpha.runner credit \
 that preserves in-degree, out-degree, sparsity, and synaptic weights. It becomes
 an executable ablation once a real MaleCNS graph loader is connected to the
 simulation path.
+
+## Latest Findings
+
+The latest local run interpretation is summarized in
+[docs/run_findings.md](docs/run_findings.md). Short version: full-file PF is
+above 1.0 and ablations support dopamine/plasticity, but walk-forward robustness
+is still weak and must improve before any public performance claim.
 
 Run one safe paper-trading tick:
 
