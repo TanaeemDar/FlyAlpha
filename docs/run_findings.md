@@ -1,26 +1,35 @@
-# FlyAlpha Run Findings
+# FlyAlpha Latest Run Findings
 
-Generated from completed local reports on 2026-09-17.
+Generated from completed local reports checked on 2026-09-18.
+
+These reports were produced from the local BTCUSDT 5-minute CSV:
+
+```text
+/home/rev/tanaeem/NY-Open-Momentum/data/bybit/BTCUSDT_linear_M5_202109110520_202609111115.csv
+```
 
 ## Report Directories
 
 ```text
 runs/20260917_103758_stats
 runs/20260917_104131_tune
-runs/20260917_115337_walk_forward
-runs/20260917_121942_ablation
+runs/20260917_132354_walk_forward
 runs/20260917_122040_credit
+runs/20260918_145829_ablation
 ```
 
-The tested CSV was:
+The newest files checked were:
 
 ```text
-/home/rev/tanaeem/NY-Open-Momentum/data/bybit/BTCUSDT_linear_M5_202109110520_202609111115.csv
+runs/20260918_145829_ablation/ablations.csv
+runs/20260918_145829_ablation/summary.json
+runs/20260917_132354_walk_forward/walk_forward.csv
+runs/20260917_132354_walk_forward/summary.json
 ```
 
-## Full-File Stats
+## Baseline Full-File Stats
 
-Using the selected tuned configuration on the full BTCUSDT file:
+Using the selected configuration on the full BTCUSDT file:
 
 ```text
 Final equity:      10609.54
@@ -29,87 +38,143 @@ Profit factor:     1.3261
 Max drawdown:      313.16
 Active trades:     2996
 Active win rate:   44.63%
+Learned weights:   24
 ```
 
-Interpretation: the selected configuration is profitable on the full file, with
-PF above 1.0 and controlled drawdown relative to the 10,000 starting equity.
+Interpretation: the full-file run is profitable, with PF above 1.0. This is a
+useful sanity check, but it is not enough by itself because a single full-period
+backtest can hide regime dependence.
 
-## Tuning
+## Best Tuning Result
 
-Best tuning result on the 50k-candle tuning run:
+Best PF-focused tuning result from the 50k-candle tuning run:
 
 ```text
-learning_rate: 0.05
-trace_decay:   0.8
-risk:          0.0025
-stop:          0.02
-take profit:   0.04
-trend filter:  12-candle aligned
+learning_rate:     0.05
+trace_decay:       0.8
+risk_per_trade:    0.0025
+stop_loss_pct:     0.02
+take_profit_pct:   0.04
+trend_filter:      12-candle aligned
 
-Reward:        4099.38
-Profit factor: 1.6908
-Max drawdown:  59.97
+Cumulative reward: 4099.38
+Profit factor:     1.6908
+Max drawdown:      59.97
 ```
 
-Interpretation: the PF objective found a strong in-sample configuration.
+The best reward result was larger, but had lower PF:
 
-## Walk-Forward Validation
+```text
+learning_rate:     0.02
+trace_decay:       0.8
+risk_per_trade:    0.0025
+stop_loss_pct:     0.01
+take_profit_pct:   0.04
+trend_filter:      12-candle aligned
 
-Walk-forward was the most important robustness check.
+Cumulative reward: 11912.98
+Profit factor:     1.5483
+Max drawdown:      189.33
+```
+
+Interpretation: tuning can find profitable parameter sets, but selecting by
+in-sample PF or reward is still vulnerable to overfitting. The real check is
+walk-forward validation.
+
+## Latest Walk-Forward Validation
+
+Latest walk-forward report:
+
+```text
+runs/20260917_132354_walk_forward/walk_forward.csv
+```
+
+Summary:
 
 ```text
 Windows:                 32
-PF > 1 windows:          8 / 32
-PF > 1 percentage:       25%
-Total reward:            8712.79
-Average window reward:   272.27
-Median PF:               0.6821
-Average PF:              0.7924
-Best PF:                 1.8205, window 1
-Worst PF:                0.2409, window 31
-Worst MDD:               690.68, window 10
-Positive reward windows: 8 / 32
+PF > 1 windows:          9 / 32
+Positive reward windows: 9 / 32
+Total reward:            5658.30
+Average window reward:   176.82
+Median PF:               0.6169
+Average PF:              0.7604
+Max MDD:                 470.07
+Average MDD:             47.72
+Total active trades:     30790
 ```
 
-Interpretation: total walk-forward reward is positive, but robustness is weak.
-A few large winning windows carry the result. Median PF below 1.0 means the
-current system is regime-dependent and not yet reliable.
-
-## Ablations
+Best PF window:
 
 ```text
-full:
-  reward: 832.90
-  PF:     1.6153
-  MDD:    89.86
-
-dopamine_disabled:
-  reward: -2369.21
-  PF:     0.8498
-  MDD:    2434.68
-
-plasticity_frozen:
-  reward: -2369.21
-  PF:     0.8498
-  MDD:    2434.68
-
-random_reward:
-  reward: -89.86
-  PF:     0.6220
-  MDD:    93.28
-
-reward_delay_12:
-  reward: -34.80
-  PF:     0.6652
-  MDD:    48.15
+Window:       1
+PF:           1.8205
+Reward:       1645.08
+MDD:          44.10
+Active trades: 2466
 ```
 
-Interpretation: dopamine-modulated plasticity matters in the current system.
-Disabling dopamine, freezing plasticity, or randomizing reward degrades the
-result substantially.
+Best reward window:
 
-`degree_preserving_random` is scaffolded but not yet executable because a real
-MaleCNS graph loader is not connected to the active simulation path.
+```text
+Window:       19
+PF:           1.2099
+Reward:       2076.92
+MDD:          470.07
+```
+
+Worst PF window:
+
+```text
+Window:       31
+PF:           0.2411
+Reward:       -45.38
+MDD:          47.93
+```
+
+Interpretation: this is the key weakness. The system can produce strong
+profitable windows, but only 9 of 32 walk-forward windows have PF above 1.0.
+Median PF remains below 1.0, so the current configuration is not robust enough
+for public performance claims or live trading.
+
+## Walk-Forward Comparison
+
+The newer walk-forward run improved drawdown but did not improve median PF:
+
+| Report | Windows | PF > 1 | Median PF | Average PF | Total reward | Max MDD |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `20260917_115337_walk_forward` | 32 | 8 | 0.6821 | 0.7924 | 8712.79 | 690.68 |
+| `20260917_132354_walk_forward` | 32 | 9 | 0.6169 | 0.7604 | 5658.30 | 470.07 |
+
+Interpretation: the newer run has one more profitable window and lower worst
+drawdown, but total reward, median PF, and average PF are lower. This is a
+mixed result, not a clean robustness improvement.
+
+## Latest Ablation Results
+
+Latest ablation report:
+
+```text
+runs/20260918_145829_ablation/ablations.csv
+```
+
+| Control | PF | Reward | MDD | Active trades | Win rate |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| full | 1.5625 | 797.68 | 125.32 | 1932 | 47.31% |
+| dopamine_disabled | 0.8552 | -4097.41 | 4114.41 | 49908 | 44.00% |
+| plasticity_frozen | 0.8552 | -4097.41 | 4114.41 | 49908 | 44.00% |
+| random_reward | 0.5636 | -152.35 | 155.05 | 688 | 38.52% |
+| reward_delay_12 | 0.5619 | -127.46 | 141.02 | 631 | 38.99% |
+
+Interpretation: this is the strongest scientific signal in the current reports.
+The full dopamine-plasticity loop is profitable, while disabling dopamine,
+freezing plasticity, randomizing reward, or delaying reward substantially
+degrades PF. That supports the claim that the current learning loop matters.
+
+It does not yet prove that the biological topology itself is responsible. The
+degree-preserving randomized-connectome control is scaffolded, but needs a real
+MaleCNS graph loader connected to the active simulation path before it can be a
+decisive topology ablation.
 
 ## Credit Assignment
 
@@ -132,27 +197,29 @@ delay=3, trace=0.8:
   MDD:    560.73
 ```
 
-Interpretation: the credit-assignment bridge is highly influential. Small
-reward delays can still work, but longer delays and poorly matched trace decay
-often degrade PF and increase drawdown.
+Interpretation: the credit-assignment bridge is highly influential. Small reward
+delays can remain profitable, but longer delays and poorly matched trace decay
+can quickly degrade PF or increase drawdown.
 
 ## Bottom Line
 
 Promising:
 
 - full-file PF is above 1.0;
-- ablations support the importance of dopamine/plasticity;
-- some delayed-reward configurations remain profitable.
+- tuned configurations can reach PF around 1.6 to 1.7;
+- ablations strongly support dopamine-gated plasticity as useful;
+- delayed reward can work when trace decay is matched well.
 
 Not yet robust:
 
-- only 8 of 32 walk-forward windows have PF above 1.0;
-- median walk-forward PF is 0.6821;
-- results are regime-dependent.
+- latest walk-forward PF is above 1.0 in only 9 of 32 windows;
+- median walk-forward PF is 0.6169;
+- profitable behavior is regime-dependent;
+- full MaleCNS topology is not yet in the live simulation path.
 
 ## Next Target
 
-Improve walk-forward consistency before claiming robustness.
+Improve walk-forward consistency before making any stronger claim.
 
 Target:
 
@@ -164,8 +231,8 @@ lower worst-window MDD
 
 Recommended next engineering direction:
 
-- add richer deterministic regime filters;
-- tune for median walk-forward PF rather than single-window PF;
-- add full MaleCNS graph loading before claiming real fly-connectome topology;
-- make degree-preserving randomized topology executable once the graph loader is connected.
-
+- tune against walk-forward median PF, not only in-sample PF;
+- add deterministic regime filters for volatility and trend quality;
+- expand ablations to include degree-preserving topology randomization;
+- connect the real MaleCNS graph loader before claiming fly-connectome topology;
+- keep live-trading support behind paper mode until walk-forward robustness improves.

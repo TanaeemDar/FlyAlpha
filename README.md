@@ -383,9 +383,19 @@ simulation path.
 ## Latest Findings
 
 The latest local run interpretation is summarized in
-[docs/run_findings.md](docs/run_findings.md). Short version: full-file PF is
-above 1.0 and ablations support dopamine/plasticity, but walk-forward robustness
-is still weak and must improve before any public performance claim.
+[docs/run_findings.md](docs/run_findings.md). As of the 2026-09-18 report check:
+
+```text
+baseline full-file PF:       1.3261
+best tuned PF:               1.6908
+latest full ablation PF:     1.5625
+latest walk-forward PF > 1:  9 / 32 windows
+latest walk-forward median:  0.6169 PF
+```
+
+Short version: full-file runs and ablations are promising, especially for the
+dopamine/plasticity loop, but walk-forward robustness is still weak and must
+improve before any public performance claim.
 
 Run one safe paper-trading tick:
 
