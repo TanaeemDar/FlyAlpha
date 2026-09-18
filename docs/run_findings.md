@@ -5,7 +5,7 @@ Generated from completed local reports checked on 2026-09-18.
 These reports were produced from the local BTCUSDT 5-minute CSV:
 
 ```text
-/home/rev/tanaeem/NY-Open-Momentum/data/bybit/BTCUSDT_linear_M5_202109110520_202609111115.csv
+BTCUSDT_linear_M5_202109110520_202609111115.csv
 ```
 
 ## Report Directories
